@@ -93,6 +93,8 @@ class AIWebSocketManager(
                 if (ws.isOpen) {
                     if(!message.startsWith("{\"type\":\"input_audio_buffer.append")) {
                         println(message)
+                    }else{
+                        println("input_audio_buffer.append")
                     }
                     ws.send(message)
                 } else {

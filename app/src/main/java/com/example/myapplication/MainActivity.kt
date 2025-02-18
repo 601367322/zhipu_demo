@@ -229,7 +229,8 @@ fun ChatScreen() {
                                     // 从缓存文件读取并发送
                                     val bytes = cacheFile.readBytes()
                                     webSocketManager?.sendAudioData(bytes)
-                                    webSocketManager?.commitAudioBuffer()
+                                    println("发送音频文件`这是什么东西`")
+//                                    webSocketManager?.commitAudioBuffer()
                                     
                                     // 删除缓存文件
                                     cacheFile.delete()
