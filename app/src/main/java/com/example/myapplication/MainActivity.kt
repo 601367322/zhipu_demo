@@ -82,6 +82,9 @@ fun ChatScreen() {
     var statusLines by remember { mutableStateOf(mutableListOf<String>()) }
     var aiResponseBuffer by remember { mutableStateOf("") }
     
+    // 添加音频文件计数器
+    var audioFileIndex by remember { mutableStateOf(0) }
+    
     // 添加辅助函数来更新状态行
     fun addStatusLine(line: String) {
         statusLines = (statusLines + line).takeLast(5).toMutableList() // 保留最后5行
@@ -220,7 +223,14 @@ fun ChatScreen() {
                                     
                                     // 从raw资源读取
                                     val cacheFile = File(context.cacheDir, "test.wav")
-                                    context.resources.openRawResource(R.raw.test).use { input ->
+                                    // 使用当前索引获取音频文件
+                                    val resourceId = context.resources.getIdentifier(
+                                        "test$audioFileIndex",
+                                        "raw",
+                                        context.packageName
+                                    )
+                                    
+                                    context.resources.openRawResource(resourceId).use { input ->
                                         FileOutputStream(cacheFile).use { output ->
                                             input.copyTo(output)
                                         }
@@ -229,8 +239,10 @@ fun ChatScreen() {
                                     // 从缓存文件读取并发送
                                     val bytes = cacheFile.readBytes()
                                     webSocketManager?.sendAudioData(bytes)
-                                    println("发送音频文件`这是什么东西`")
-//                                    webSocketManager?.commitAudioBuffer()
+                                    println("发送音频文件 test$audioFileIndex.wav")
+                                    
+                                    // 更新索引，循环使用0-10
+                                    audioFileIndex = (audioFileIndex + 1) % 11
                                     
                                     // 删除缓存文件
                                     cacheFile.delete()
