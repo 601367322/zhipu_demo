@@ -215,6 +215,9 @@ fun ChatScreen() {
                         onClick = {
                             scope.launch(Dispatchers.IO) {
                                 try {
+                                    // 取消当前响应
+                                    webSocketManager?.cancelResponse()
+                                    
                                     // 从raw资源读取
                                     val cacheFile = File(context.cacheDir, "test.wav")
                                     context.resources.openRawResource(R.raw.test).use { input ->

@@ -36,6 +36,7 @@ class AIWebSocketManager(
     private var isActiveDisconnect = false
     private val scope = CoroutineScope(Dispatchers.IO)
     private var reconnectJob: Job? = null
+    private var lastVideoFrameTime = 0L  // 添加这一行来跟踪上一帧的发送时间
     
     companion object {
         val AUDIO_START = ByteArray(0)  // 空数组表示开始
@@ -90,6 +91,9 @@ class AIWebSocketManager(
         try {
             webSocket?.let { ws ->
                 if (ws.isOpen) {
+                    if(!message.startsWith("{\"type\":\"input_audio_buffer.append")) {
+                        println(message)
+                    }
                     ws.send(message)
                 } else {
                     println("WebSocket is not open, message not sent")
@@ -154,12 +158,19 @@ class AIWebSocketManager(
     }
     
     fun sendVideoFrame(videoFrame: ByteArray) {
+        val currentTime = System.currentTimeMillis()
+        // 检查是否距离上一帧发送已经过去了至少500毫秒（1秒2帧）
+        if (currentTime - lastVideoFrameTime < 500) {
+            return
+        }
+        
         val videoMessage = JSONObject().apply {
             put("type", "input_audio_buffer.append_video_frame")
             put("video_frame", Base64.getEncoder().encodeToString(videoFrame))
-            put("client_timestamp", System.currentTimeMillis())
+            put("client_timestamp", currentTime)
         }.toString()
         
+        lastVideoFrameTime = currentTime
         safeSend(videoMessage)
     }
 
