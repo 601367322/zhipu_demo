@@ -39,6 +39,8 @@ class AudioManager(private val context: Context) {
     private val mp3Buffer = ByteArrayOutputStream()
     private var isCollectingMp3 = false
     
+    private var onPlaybackComplete: (() -> Unit)? = null
+    
     init {
         initAudioTrack()
     }
@@ -102,8 +104,18 @@ class AudioManager(private val context: Context) {
     @SuppressLint("MissingPermission")
     fun startRecording(onData: (ByteArray) -> Unit) {
         onAudioData = onData
+        
+        // 获取系统音频服务
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        
+        // 设置模式为通信模式，这将启用回声消除
+        audioManager.mode = android.media.AudioManager.MODE_IN_COMMUNICATION
+        
+        // 关闭扬声器
+        audioManager.isSpeakerphoneOn = false
+        
         audioRecord = AudioRecord(
-            MediaRecorder.AudioSource.MIC,
+            MediaRecorder.AudioSource.VOICE_COMMUNICATION, // 使用 VOICE_COMMUNICATION 代替 MIC
             sampleRate,
             channelConfig,
             audioFormat,
@@ -134,21 +146,11 @@ class AudioManager(private val context: Context) {
         }
     }
     
-    fun stopRecording() {
+    private fun stopRecording() {
         recordingJob?.cancel()
         audioRecord?.stop()
         audioRecord?.release()
         audioRecord = null
-        onAudioData = null
-    }
-    
-    fun playAudio(audioData: ByteArray) {
-        audioTrack?.let { track ->
-            if (track.playState != AudioTrack.PLAYSTATE_PLAYING) {
-                track.play()
-            }
-            track.write(audioData, 0, audioData.size)
-        }
     }
     
     // 开始收集MP3数据块
@@ -162,6 +164,10 @@ class AudioManager(private val context: Context) {
         if (isCollectingMp3) {
             mp3Buffer.write(data)
         }
+    }
+    
+    fun setOnPlaybackCompleteListener(listener: () -> Unit) {
+        onPlaybackComplete = listener
     }
     
     // 完成MP3收集并播放
@@ -189,23 +195,28 @@ class AudioManager(private val context: Context) {
                     .build()
             )
             prepare()
-            start()
             
-            // 播放完成后删除临时文件
+            // 播放完成后恢复录音
             setOnCompletionListener {
                 tempFile.delete()
                 release()
                 mediaPlayer = null
+                // 触发播放完成回调
+                onPlaybackComplete?.invoke()
             }
+            
+            start()
         }
     }
     
-     fun release() {
+    fun release() {
         stopRecording()
         audioTrack?.release()
         audioTrack = null
         mediaPlayer?.release()
         mediaPlayer = null
+        onAudioData = null
+        onPlaybackComplete = null
         mp3Buffer.close()
     }
 } 

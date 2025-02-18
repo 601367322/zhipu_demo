@@ -25,7 +25,6 @@ class AIWebSocketManager(
     private val onConnectionError: (String) -> Unit,
     private val onResponseText: (String) -> Unit = {},
     private val onResponseAudio: (ByteArray) -> Unit = {},
-    private val onResponseVideo: (ByteArray) -> Unit = {},
     private val onTurnStart: () -> Unit = {},
     private val onTurnEnd: () -> Unit = {},
     private val onSpeechStarted: () -> Unit = {},
@@ -37,6 +36,11 @@ class AIWebSocketManager(
     private var isActiveDisconnect = false
     private val scope = CoroutineScope(Dispatchers.IO)
     private var reconnectJob: Job? = null
+    
+    companion object {
+        val AUDIO_START = ByteArray(0)  // 空数组表示开始
+        val AUDIO_END = ByteArray(1) { 0 }  // 长度为1的数组表示结束
+    }
     
     fun connect() {
         isActiveDisconnect = false
@@ -246,10 +250,9 @@ class AIWebSocketManager(
                 }
                 
                 "response.created" -> {
-                    // AI开始响应，准备接收音频
                     onResponseCreated(jsonMessage.optJSONObject("response")?.optString("id") ?: "")
-                    // 通知AudioManager开始收集MP3数据
-                    onResponseAudio(ByteArray(0)) // 触发开始收集
+                    // 通知开始收集MP3数据
+                    onResponseAudio(AUDIO_START)
                 }
                 
                 "response.audio_transcript.delta" -> {
@@ -265,15 +268,14 @@ class AIWebSocketManager(
                 }
                 
                 "response.audio.delta" -> {
-                    // 接收MP3数据块
                     val audioData = Base64.getDecoder()
                         .decode(jsonMessage.optString("delta", ""))
                     onResponseAudio(audioData)
                 }
                 
                 "response.audio.done" -> {
-                    // MP3数据接收完成，开始播放
-                    onResponseAudio(ByteArray(-1)) // 触发播放
+                    // 通知MP3数据接收完成
+                    onResponseAudio(AUDIO_END)
                 }
                 
                 "response.done" -> {
