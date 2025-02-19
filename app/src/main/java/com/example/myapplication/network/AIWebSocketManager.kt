@@ -116,8 +116,8 @@ class AIWebSocketManager(
                     "input_audio_format": "wav",
                     "output_audio_format": "mp3",
                     "instructions": "",
-                    "turn_detection": {
-                        "type": "server_vad"
+                     "turn_detection": {
+                        "type": "client_vad"
                     },
                     "beta_fields": {
                         "chat_mode": "video_passive",
@@ -198,6 +198,14 @@ class AIWebSocketManager(
         safeSend(itemMessage)
     }
     
+    fun createResponse() {
+        val responseMessage = JSONObject().apply {
+            put("type", "response.create")
+            put("client_timestamp", System.currentTimeMillis())
+        }.toString()
+        safeSend(responseMessage)
+    }
+
     fun cancelResponse() {
         val cancelMessage = JSONObject().apply {
             put("type", "response.cancel")
@@ -243,6 +251,7 @@ class AIWebSocketManager(
                 
                 "input_audio_buffer.committed" -> {
                     // 音频缓冲区已提交，可以开始新的录制
+                    createResponse()
                 }
                 
                 "conversation.created" -> {
@@ -260,6 +269,7 @@ class AIWebSocketManager(
                 
                 "conversation.item.created" -> {
                     // 会话项已创建
+//                    createResponse()
                 }
                 
                 "response.created" -> {

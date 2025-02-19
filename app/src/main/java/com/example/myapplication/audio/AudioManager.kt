@@ -8,6 +8,9 @@ import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaPlayer
 import android.media.MediaRecorder
+import android.media.audiofx.AcousticEchoCanceler
+import android.media.audiofx.AutomaticGainControl
+import android.media.audiofx.NoiseSuppressor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,6 +36,11 @@ class AudioManager(private val context: Context) {
     private val audioFormat = AudioFormat.ENCODING_PCM_16BIT // 16位PCM
     private val bytesPerSample = 2 // 16位 = 2字节
     private val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+    
+    // 音频处理参数
+    private var isAcousticEchoCancelerAvailable = false
+    private var isNoiseSuppressorAvailable = false
+    private var isAutomaticGainControlAvailable = false
     
     private var onAudioData: ((ByteArray) -> Unit)? = null
     
@@ -115,14 +123,22 @@ class AudioManager(private val context: Context) {
         
         // 关闭扬声器
         audioManager.isSpeakerphoneOn = false
-        
+
         audioRecord = AudioRecord(
-            MediaRecorder.AudioSource.VOICE_COMMUNICATION, // 使用 VOICE_COMMUNICATION 代替 MIC
+            MediaRecorder.AudioSource.VOICE_COMMUNICATION,
             sampleRate,
             channelConfig,
             audioFormat,
             bufferSize
-        )
+        ).apply {
+            // 检查并启用声学回声消除器
+            if (AcousticEchoCanceler.isAvailable()) {
+                val aec = AcousticEchoCanceler.create(audioSessionId)
+                aec?.enabled = true
+                isAcousticEchoCancelerAvailable = true
+            }
+
+        }
         
         recordingJob = scope.launch {
             val buffer = ByteArray(bufferSize)

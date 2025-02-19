@@ -214,48 +214,84 @@ fun ChatScreen() {
             modifier = Modifier.fillMaxSize(),
             floatingActionButton = {
                 if (isChatting) {
-                    FloatingActionButton(
-                        onClick = {
-                            scope.launch(Dispatchers.IO) {
-                                try {
-                                    // 取消当前响应
-                                    webSocketManager?.cancelResponse()
-                                    
-                                    // 从raw资源读取
-                                    val cacheFile = File(context.cacheDir, "test.wav")
-                                    // 使用当前索引获取音频文件
-                                    val resourceId = context.resources.getIdentifier(
-                                        "test$audioFileIndex",
-                                        "raw",
-                                        context.packageName
-                                    )
-                                    
-                                    context.resources.openRawResource(resourceId).use { input ->
-                                        FileOutputStream(cacheFile).use { output ->
-                                            input.copyTo(output)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FloatingActionButton(
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    try {
+                                        // 从raw资源读取
+                                        val cacheFile = File(context.cacheDir, "test.wav")
+                                        // 使用当前索引获取音频文件
+                                        val resourceId = context.resources.getIdentifier(
+                                            "test$audioFileIndex",
+                                            "raw",
+                                            context.packageName
+                                        )
+                                        
+                                        context.resources.openRawResource(resourceId).use { input ->
+                                            FileOutputStream(cacheFile).use { output ->
+                                                input.copyTo(output)
+                                            }
                                         }
+                                        
+                                        // 从缓存文件读取并发送
+                                        val bytes = cacheFile.readBytes()
+                                        webSocketManager?.cancelResponse()
+                                        webSocketManager?.sendAudioData(bytes)
+                                        webSocketManager?.commitAudioBuffer()
+
+                                        var voice = "这是什么东西"
+                                        if(audioFileIndex == 0){
+                                            voice = "这是什么东西"
+                                        }else if(audioFileIndex == 1){
+                                            voice = "现在是白天还是晚上"
+                                        }else if(audioFileIndex == 2){
+                                            voice = "插排是什么颜色的"
+                                        }else if(audioFileIndex == 3){
+                                            voice = "你看到茶壶了吗"
+                                        }else if(audioFileIndex == 4){
+                                            voice = "手机是什么型号的"
+                                        }else if(audioFileIndex == 5){
+                                            voice = "这里有哪些文字"
+                                        }else if(audioFileIndex == 6){  
+                                            voice = "一共有多少个充电器"
+                                        }else if(audioFileIndex == 7){
+                                            voice = "你看到了哪些东西"
+                                        }
+                                        println("发送音频文件 test$audioFileIndex.wav $voice")
+                                        // 更新索引，循环使用0-10
+                                        audioFileIndex = (audioFileIndex + 1) % 8
+                                        
+                                        // 删除缓存文件
+                                        cacheFile.delete()
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
                                     }
-                                    
-                                    // 从缓存文件读取并发送
-                                    val bytes = cacheFile.readBytes()
-                                    webSocketManager?.sendAudioData(bytes)
-                                    println("发送音频文件 test$audioFileIndex.wav")
-                                    
-                                    // 更新索引，循环使用0-10
-                                    audioFileIndex = (audioFileIndex + 1) % 11
-                                    
-                                    // 删除缓存文件
-                                    cacheFile.delete()
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
                                 }
                             }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "测试音频"
+                            )
                         }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "测试音频"
-                        )
+                        
+                        FloatingActionButton(
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    try {
+                                        webSocketManager?.cancelResponse()
+                                        webSocketManager?.commitAudioBuffer()
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("提交")
+                        }
                     }
                 }
             }
